@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Index Page</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-2.4.2.min.js"></script>
@@ -21,25 +21,25 @@
   </head>
   <body class="bg-light">
 
-    <div class="container h-100 d-flex justify-content-center">
+    <div class="row justify-content-center">
+        <div id="DriverIncomesHistogram"></div> <div id="PassengerWaitTimesHistogram"></div>
+    </div>
+
+    <div class="container d-flex justify-content-center">
       <div class="form-group jumbotron my-auto">
-      <div id="DriverIncomesHistogram"></div>
-      <br />
-      <div id="PassengerWaitTimesHistogram"></div>
       <form action="/" id="form">
           <label for="seniority_weight" class="form-label">Seniority Weight</label>
-          <input type="range" name="seniority_weight" class="form-range" value="0" min="0" max="100" step="20" id="seniority_weight" oninput="seniority_weight_output.value = this.value"><output id="seniority_weight_output">0</output>
+          <input type="range" name="seniority_weight" class="form-range" value="0" min="0" max="100" step="20" id="seniority_weight" oninput="seniority_weight_output.value = this.value; submitForm();"><output id="seniority_weight_output">0</output>
           <br />
 
           <label for="fairness_weight" class="form-label">Fairness Weight</label>
-          <input type="range" name="fairness_weight" class="form-range" value="0" min="0" max="100" step="20" id="fairness_weight" oninput="fairness_weight_output.value = this.value"><output id="fairness_weight_output">0</output>
+          <input type="range" name="fairness_weight" class="form-range" value="0" min="0" max="100" step="20" id="fairness_weight" oninput="fairness_weight_output.value = this.value; submitForm();"><output id="fairness_weight_output">0</output>
           <br />
 
           <label for="waittime_weight" class="form-label">Passenger Wait Time Weight</label>
-          <input type="range" name="waittime_weight" class="form-range" value="0" min="0" max="100" step="20" id="waittime_weight" oninput="waittime_weight_output.value = this.value"><output id="waittime_weight_output">0</output>
+          <input type="range" name="waittime_weight" class="form-range" value="0" min="0" max="100" step="20" id="waittime_weight" oninput="waittime_weight_output.value = this.value; submitForm();"><output id="waittime_weight_output">0</output>
           <br />
 
-        <button type="submit" class="btn btn-primary" onclick="submitForm()">Calculate</button>
       </form>
       </div>
     </div>
@@ -55,10 +55,13 @@
       var driver_income_histogram_layout = {
         title: "Histogram of Driver Incomes",
         xaxis: {title: "Driver Incomes (dollars per day)"},
-        yaxis: {title: "Number of Drivers"}
+        yaxis: {title: "Number of Drivers"},
+        width: 300,
+        height: 300
       }
       var data = [driver_income_histogram];
-      Plotly.newPlot('DriverIncomesHistogram', data, driver_income_histogram_layout);
+      var config = {'staticPlot': true};
+      Plotly.newPlot('DriverIncomesHistogram', data, driver_income_histogram_layout, config);
 
 
       var passenger_wait_time_histogram = {
@@ -68,10 +71,12 @@
       var passenger_wait_time_histogram_layout = {
         title: "Histogram of Passenger Wait Times",
         xaxis: {title: "Passenger Wait Time (in seconds)"},
-        yaxis: {title: "Number of Passengers"}
+        yaxis: {title: "Number of Passengers"},
+        width: 300,
+        height: 300
       }
       var data = [passenger_wait_time_histogram];
-      Plotly.newPlot('PassengerWaitTimesHistogram', data, passenger_wait_time_histogram_layout);
+      Plotly.newPlot('PassengerWaitTimesHistogram', data, passenger_wait_time_histogram_layout, config);
 
 
       $("#form").submit(function(e) {
@@ -84,14 +89,14 @@
           type: 'histogram',
         };
         var data = [driver_income_histogram];
-        Plotly.react('DriverIncomesHistogram', data, driver_income_histogram_layout);
+        Plotly.react('DriverIncomesHistogram', data, driver_income_histogram_layout, config);
 
         var passenger_wait_time_histogram = {
           x: calculations["PassengerWaitTimes"],
           type: 'histogram',
         };
         var data = [passenger_wait_time_histogram];
-        Plotly.react('PassengerWaitTimesHistogram', data, passenger_wait_time_histogram_layout);
+        Plotly.react('PassengerWaitTimesHistogram', data, passenger_wait_time_histogram_layout, config);
       };
 
       var request = null;

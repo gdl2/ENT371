@@ -187,15 +187,10 @@ def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_mont
 seed(42)
 # Take a random sample of 10000 passenger trips
 random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 1000)
-random_sample_passenger_trips_dict = {}
-for idx in random_sample_p:
-    random_sample_passenger_trips_dict[str(idx)] = SINGLE_PASSENGER_TRIPS_DICT[str(idx)]
 
 # Take a random sample of 1000 drivers
 random_sample_d = sample(range(1, len(DRIVERS_DICT)), 100)
-random_sample_drivers_dict = {}
-for idx in random_sample_d:
-    random_sample_drivers_dict[str(idx)] = DRIVERS_DICT[str(idx)]
+
 
 # Cache all possible combinations of parameters
 range_of_values = range(0, 120, 20)
@@ -203,10 +198,17 @@ for i in range_of_values:
     for j in range_of_values:
         for k in range_of_values:
             print(i, j, k)
-            random_sample_passenger_trips_dict_copy = random_sample_passenger_trips_dict.copy()
-            random_sample_drivers_dict_copy = random_sample_drivers_dict.copy()
+
+            random_sample_passenger_trips_dict = {}
+            for idx in random_sample_p:
+                random_sample_passenger_trips_dict[str(idx)] = SINGLE_PASSENGER_TRIPS_DICT[str(idx)].copy()
+
+            random_sample_drivers_dict = {}
+            for idx in random_sample_d:
+                random_sample_drivers_dict[str(idx)] = DRIVERS_DICT[str(idx)].copy()
+
             # Last 4 variables correspond to: driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight, target_income_earned
-            assign_drivers_to_passengers(random_sample_passenger_trips_dict_copy, random_sample_drivers_dict_copy, i, j, k, 100)
+            assign_drivers_to_passengers(random_sample_passenger_trips_dict, random_sample_drivers_dict, i, j, k, 100)
 
             calculations = {"DriverIncomes": [], "PassengerWaitTimes": []}
             for id, driver in random_sample_drivers_dict.items():
@@ -218,6 +220,7 @@ for i in range_of_values:
             my_file = "static/{} {} {}.json.gz".format(i, j, k)
             print(my_file)
             compress_json.dump(calculations, my_file)
+
 
             #
             # lst_of_driver_months_active = []
