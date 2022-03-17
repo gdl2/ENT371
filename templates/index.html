@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Index Page</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.4.2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <style>
+    html, body {
+        margin: 0;
+        height: 100%;
+    }
+    </style>
+    <script type="text/javascript">
+      const CALCULATIONS = {{calculations|tojson}};
+    </script>
+  </head>
+  <body class="bg-light">
+
+    <div class="container h-100 d-flex justify-content-center">
+      <div class="form-group jumbotron my-auto">
+      <div id="DriverIncomesHistogram"></div>
+      <br />
+      <div id="PassengerWaitTimesHistogram"></div>
+      <form action="/" id="form">
+          <label for="seniority_weight" class="form-label">Seniority Weight</label>
+          <input type="range" name="seniority_weight" class="form-range" value="0" min="0" max="100" step="20" id="seniority_weight" oninput="seniority_weight_output.value = this.value"><output id="seniority_weight_output">0</output>
+          <br />
+
+          <label for="fairness_weight" class="form-label">Fairness Weight</label>
+          <input type="range" name="fairness_weight" class="form-range" value="0" min="0" max="100" step="20" id="fairness_weight" oninput="fairness_weight_output.value = this.value"><output id="fairness_weight_output">0</output>
+          <br />
+
+          <label for="waittime_weight" class="form-label">Passenger Wait Time Weight</label>
+          <input type="range" name="waittime_weight" class="form-range" value="0" min="0" max="100" step="20" id="waittime_weight" oninput="waittime_weight_output.value = this.value"><output id="waittime_weight_output">0</output>
+          <br />
+
+        <button type="submit" class="btn btn-primary" onclick="submitForm()">Calculate</button>
+      </form>
+      </div>
+    </div>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+    <script>
+      var driver_income_histogram = {
+        x: CALCULATIONS["DriverIncomes"],
+        type: 'histogram',
+      };
+      var driver_income_histogram_layout = {
+        title: "Histogram of Driver Incomes",
+        xaxis: {title: "Driver Incomes (dollars per day)"},
+        yaxis: {title: "Number of Drivers"}
+      }
+      var data = [driver_income_histogram];
+      Plotly.newPlot('DriverIncomesHistogram', data, driver_income_histogram_layout);
+
+
+      var passenger_wait_time_histogram = {
+        x: CALCULATIONS["PassengerWaitTimes"],
+        type: 'histogram',
+      };
+      var passenger_wait_time_histogram_layout = {
+        title: "Histogram of Passenger Wait Times",
+        xaxis: {title: "Passenger Wait Time (in seconds)"},
+        yaxis: {title: "Number of Passengers"}
+      }
+      var data = [passenger_wait_time_histogram];
+      Plotly.newPlot('PassengerWaitTimesHistogram', data, passenger_wait_time_histogram_layout);
+
+
+      $("#form").submit(function(e) {
+        e.preventDefault();
+      });
+
+      function handleResponse(calculations) {
+        var driver_income_histogram = {
+          x: calculations["DriverIncomes"],
+          type: 'histogram',
+        };
+        var data = [driver_income_histogram];
+        Plotly.react('DriverIncomesHistogram', data, driver_income_histogram_layout);
+
+        var passenger_wait_time_histogram = {
+          x: calculations["PassengerWaitTimes"],
+          type: 'histogram',
+        };
+        var data = [passenger_wait_time_histogram];
+        Plotly.react('PassengerWaitTimesHistogram', data, passenger_wait_time_histogram_layout);
+      };
+
+      var request = null;
+
+      function submitForm() {
+        var seniority_weight = $('#seniority_weight').val();
+        var fairness_weight = $('#fairness_weight').val();
+        var waittime_weight = $('#waittime_weight').val();
+
+        console.log(seniority_weight, fairness_weight, waittime_weight);
+
+        var url = '/update_graphs?seniority_weight=' + seniority_weight
+           + '&fairness_weight=' + fairness_weight
+           + '&waittime_weight=' + waittime_weight
+
+        console.log(url);
+
+        if (request != null) {
+             request.abort();
+           };
+
+         request = $.ajax(
+           {
+             type: 'GET',
+             url: url,
+             success: handleResponse
+           }
+         );
+      };
+    </script>
+  </body>
+</html>

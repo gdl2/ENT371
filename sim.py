@@ -2,6 +2,9 @@ import csv
 from geopy.distance import distance, great_circle
 import numpy as np
 from random import sample, seed
+import os
+import compress_json
+
 
 # Supplement driver data
 # Each driver has 3 features: home_zipcode [static], months_active [static], income_earned [dynamic], time_driving [dynamic], end_trip_time [dynamic]
@@ -57,6 +60,7 @@ print("NUMBER OF DRIVERS:", len(DRIVERS_DICT))
 SINGLE_PASSENGER_TRIPS_DICT = {}
 
 COST_PER_VEHICLE_MILE = 2
+COST_PER_DRIVER_MINUTE = 0.5
 
 # Read the csv file
 with open("Jan0122Trips.csv", 'r', encoding='utf-8-sig') as file:
@@ -97,7 +101,7 @@ with open("Jan0122Trips.csv", 'r', encoding='utf-8-sig') as file:
             trip_length = float(row[trip_length_index])
             single_passenger_trip["trip_length"] = trip_length
 
-            trip_cost = COST_PER_VEHICLE_MILE * trip_length
+            trip_cost = COST_PER_VEHICLE_MILE * trip_length + COST_PER_DRIVER_MINUTE * (trip_duration % 60)
             single_passenger_trip["trip_cost"] = trip_cost
 
             pickup_lat = float(row[pickup_lat_index])
@@ -137,8 +141,11 @@ def rank_drivers(dict_drivers, single_passenger_trip, driver_months_active_weigh
 
     for driverid, driver in dict_drivers.items():
         # Calculate driver total weight
-        driver_months_active_weight_calculated = driver["months_active"] * driver_months_active_weight
-        driver_income_earned_weight_calculated = (target_income_earned - driver["income_earned"]) * driver_income_earned_weight # If driver earns more than target, this value becomes negative
+        # Seniority follows cube root distribution: importance of seniority reaches a limit after some number of months
+        driver_months_active_weight_calculated = (driver["months_active"]**(1/3)) * driver_months_active_weight
+
+        # Fairness follows inverse distribution: very important at first, then falls to zero as income reaches a certain level
+        driver_income_earned_weight_calculated = (1000/(driver["income_earned"]+0.00001)) * driver_income_earned_weight # If driver earns more than target, this value becomes negative
 
         # Need to calculate how long it takes for this driver to pickup the passenger at their location
         # If driver has not had a passenger thus far, spawn them on their first passenger
@@ -148,7 +155,9 @@ def rank_drivers(dict_drivers, single_passenger_trip, driver_months_active_weigh
             driver_location = (driver["lat"], driver["lon"])
             passenger_location = (single_passenger_trip["pickup_lat"], single_passenger_trip["pickup_lon"])
             passenger_wait_time = max(0, driver["end_trip_time"] - single_passenger_trip["trip_request_time"]) + (great_circle(driver_location, passenger_location).miles * TRAVEL_TIME_PER_VEHICLE_MILE)
-        passenger_wait_time_weight_calculated = passenger_wait_time * passenger_wait_time_weight
+
+        # Pax Wait Time follows a cubed distribution: small at first but quickly grows in importance (no passenger wants to wait too long)
+        passenger_wait_time_weight_calculated = (passenger_wait_time**3) * passenger_wait_time_weight
 
         driver_total_weight_calculated = driver_months_active_weight_calculated + driver_income_earned_weight_calculated - passenger_wait_time_weight_calculated
 
@@ -176,59 +185,74 @@ def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_mont
 
 
 seed(42)
-random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 10000)
+# Take a random sample of 10000 passenger trips
+random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 1000)
 random_sample_passenger_trips_dict = {}
 for idx in random_sample_p:
     random_sample_passenger_trips_dict[str(idx)] = SINGLE_PASSENGER_TRIPS_DICT[str(idx)]
 
-random_sample_d = sample(range(1, len(DRIVERS_DICT)), 1000)
+# Take a random sample of 1000 drivers
+random_sample_d = sample(range(1, len(DRIVERS_DICT)), 100)
 random_sample_drivers_dict = {}
 for idx in random_sample_d:
     random_sample_drivers_dict[str(idx)] = DRIVERS_DICT[str(idx)]
 
-# driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight, target_income_earned
-assign_drivers_to_passengers(random_sample_passenger_trips_dict, random_sample_drivers_dict, 0, 0, 100, 100)
+# Cache all possible combinations of parameters
+range_of_values = range(0, 120, 20)
+for i in range_of_values:
+    for j in range_of_values:
+        for k in range_of_values:
+            print(i, j, k)
+            random_sample_passenger_trips_dict_copy = random_sample_passenger_trips_dict.copy()
+            random_sample_drivers_dict_copy = random_sample_drivers_dict.copy()
+            # Last 4 variables correspond to: driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight, target_income_earned
+            assign_drivers_to_passengers(random_sample_passenger_trips_dict_copy, random_sample_drivers_dict_copy, i, j, k, 100)
 
+            calculations = {"DriverIncomes": [], "PassengerWaitTimes": []}
+            for id, driver in random_sample_drivers_dict.items():
+                calculations["DriverIncomes"].append(driver["income_earned"])
 
-lst_of_driver_incomes = []
-lst_of_driver_months_active = []
-lst_of_driver_income_earned = []
-for id, driver in random_sample_drivers_dict.items():
-    lst_of_driver_incomes.append(driver["income_earned"])
-    lst_of_driver_months_active.append(driver["months_active"])
+            for id, passenger in random_sample_passenger_trips_dict.items():
+                calculations["PassengerWaitTimes"].append(passenger["trip_wait_time"])
 
-lst_driver_incomes_vs_months_active = list(zip(lst_of_driver_months_active, lst_of_driver_incomes))
+            my_file = "static/{} {} {}.json.gz".format(i, j, k)
+            print(my_file)
+            compress_json.dump(calculations, my_file)
 
-header =  ["Driver Income"]
-with open('driverincome.csv', 'w', encoding='UTF8', newline='') as f:
-    writer = csv.writer(f)
-    # write the header
-    writer.writerow(header)
-
-    # write multiple rows
-    writer.writerows([[elem] for elem in lst_of_driver_incomes])
-
-print("DISTRIBUTION OF DRIVER INCOMES")
-print("mean:", np.mean(lst_of_driver_incomes))
-print("median:", np.median(lst_of_driver_incomes))
-print("std:", np.std(lst_of_driver_incomes))
-
-lst_of_passenger_waittimes = []
-for id, passenger in random_sample_passenger_trips_dict.items():
-    lst_of_passenger_waittimes.append(passenger["trip_wait_time"])
-
-lst_driver_incomes_vs_waittimes = list(zip(lst_of_passenger_waittimes, lst_of_driver_incomes))
-
-header =  ["Passenger Wait Time", "Driver Income"]
-with open('passengerwaittime.csv', 'w', encoding='UTF8', newline='') as f:
-    writer = csv.writer(f)
-    # write the header
-    writer.writerow(header)
-
-    # write multiple rows
-    writer.writerows(lst_driver_incomes_vs_waittimes)
-
-print("DISTRIBUTION OF PASSENGER WAIT TIMES")
-print("mean:", np.mean(lst_of_passenger_waittimes))
-print("median:", np.median(lst_of_passenger_waittimes))
-print("std:", np.std(lst_of_passenger_waittimes))
+            #
+            # lst_of_driver_months_active = []
+            #
+            # lst_driver_incomes_vs_months_active = list(zip(lst_of_driver_months_active, lst_of_driver_incomes))
+            #
+            # header =  ["Driver Income"]
+            # with open('driverincome.csv', 'w', encoding='UTF8', newline='') as f:
+            #     writer = csv.writer(f)
+            #     # write the header
+            #     writer.writerow(header)
+            #
+            #     # write multiple rows
+            #     writer.writerows([[elem] for elem in lst_of_driver_incomes])
+            #
+            # print("DISTRIBUTION OF DRIVER INCOMES")
+            # print("mean:", np.mean(lst_of_driver_incomes))
+            # print("median:", np.median(lst_of_driver_incomes))
+            # print("std:", np.std(lst_of_driver_incomes))
+            #
+            # for id, passenger in random_sample_passenger_trips_dict.items():
+            #     lst_of_passenger_waittimes.append(passenger["trip_wait_time"])
+            #
+            # lst_driver_incomes_vs_waittimes = list(zip(lst_of_passenger_waittimes, lst_of_driver_incomes))
+            #
+            # header =  ["Passenger Wait Time", "Driver Income"]
+            # with open('passengerwaittime.csv', 'w', encoding='UTF8', newline='') as f:
+            #     writer = csv.writer(f)
+            #     # write the header
+            #     writer.writerow(header)
+            #
+            #     # write multiple rows
+            #     writer.writerows(lst_driver_incomes_vs_waittimes)
+            #
+            # print("DISTRIBUTION OF PASSENGER WAIT TIMES")
+            # print("mean:", np.mean(lst_of_passenger_waittimes))
+            # print("median:", np.median(lst_of_passenger_waittimes))
+            # print("std:", np.std(lst_of_passenger_waittimes))
