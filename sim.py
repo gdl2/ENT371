@@ -157,7 +157,7 @@ def rank_drivers(dict_drivers, single_passenger_trip, driver_months_active_weigh
             passenger_wait_time = max(0, driver["end_trip_time"] - single_passenger_trip["trip_request_time"]) + (great_circle(driver_location, passenger_location).miles * TRAVEL_TIME_PER_VEHICLE_MILE)
 
         # Pax Wait Time follows a cubed distribution: small at first but quickly grows in importance (no passenger wants to wait too long)
-        passenger_wait_time_weight_calculated = (passenger_wait_time**3) * passenger_wait_time_weight
+        passenger_wait_time_weight_calculated = (passenger_wait_time**2) * passenger_wait_time_weight
 
         driver_total_weight_calculated = driver_months_active_weight_calculated + driver_income_earned_weight_calculated - passenger_wait_time_weight_calculated
 
