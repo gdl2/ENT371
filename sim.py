@@ -1,9 +1,10 @@
 import csv
-from geopy.distance import distance, great_circle
 import numpy as np
 from random import sample, seed
 import os
 import compress_json
+import requests
+import time as t
 
 
 # Supplement driver data
@@ -70,7 +71,7 @@ with open("Jan0122Trips.csv", 'r', encoding='utf-8-sig') as file:
     header = next(csvreader)
 
     # Find index for each column header
-    trip_request_time_index = header.index("Trip Start Timestamp")
+    trip_start_time_index = header.index("Trip Start Timestamp")
     trip_duration_index = header.index("Trip Seconds")
     trip_length_index = header.index("Trip Miles")
     pickup_lat_index = header.index("Pickup Centroid Latitude")
@@ -78,22 +79,29 @@ with open("Jan0122Trips.csv", 'r', encoding='utf-8-sig') as file:
     dropoff_lat_index = header.index("Dropoff Centroid Latitude")
     dropoff_lon_index = header.index("Dropoff Centroid Longitude")
 
+    # Generate request start times for passenger trips
+    mu, sigma = 1, 1 # mean and standard deviation
+    trip_wait_time = np.random.lognormal(mu, sigma, 100000)
+    trip_wait_time = [min(elem, 15) for elem in trip_wait_time]
+
     num_null_rows = 0
     rider_id = 0
     # Iterate through rows
     for row in csvreader:
         # Make sure row has no entries missing
-        if row[trip_request_time_index] and row[trip_duration_index] and row[trip_length_index] and row[pickup_lat_index] and row[pickup_lon_index] and row[dropoff_lat_index] and row[dropoff_lon_index]:
+        if row[trip_start_time_index] and row[trip_duration_index] and row[trip_length_index] and row[pickup_lat_index] and row[pickup_lon_index] and row[dropoff_lat_index] and row[dropoff_lon_index]:
             single_passenger_trip = {} # create passenger_trip
 
-            date, time, ampm = row[trip_request_time_index].split()
+            date, time, ampm = row[trip_start_time_index].split()
             hour_to_seconds = (int(time.split(":")[0]) % 12) * 3600
             minutes_to_seconds = int(time.split(":")[1]) * 60
             pm_to_seconds = 0
             if ampm == "PM":
                 pm_to_seconds = 12*60*60
-            trip_request_time = hour_to_seconds + minutes_to_seconds + pm_to_seconds
-            single_passenger_trip["trip_request_time"] = trip_request_time
+            trip_start_time = hour_to_seconds + minutes_to_seconds + pm_to_seconds
+            single_passenger_trip["trip_start_time"] = trip_start_time
+
+            single_passenger_trip["trip_request_time"] = max(trip_start_time - trip_wait_time[rider_id], 0) # Cannot be negative
 
             trip_duration = int(row[trip_duration_index])
             single_passenger_trip["trip_duration"] = trip_duration
@@ -124,12 +132,20 @@ with open("Jan0122Trips.csv", 'r', encoding='utf-8-sig') as file:
 
 print("NUMBER OF SINGLE-PASSENGER-TRIPS:", len(SINGLE_PASSENGER_TRIPS_DICT))
 
+def getRouteMeta(location1, location2):
+    loc = "{},{};{},{}".format(location1[1], location1[0], location2[1], location2[0])
+    url = "http://127.0.0.1:5000/route/v1/driving/"
+    r = requests.get(url + loc)
+    if r.status_code != 200:
+        return {}
+    res = r.json()
+    route_distance = res['routes'][0]['distance']
+    route_duration = res['routes'][0]['duration']
+    return route_distance, route_duration
 
 
 def by_weight(elem):
     return elem[1]
-
-TRAVEL_TIME_PER_VEHICLE_MILE = 3 # how long it takes to travel one mile
 
 # Takes a single_passenger_trip object, driver_months_active_weight (how important is seniority), driver_income_earned_weight (how important is fairness), passenger_wait_time_weight (how important is decreasing passenger wait time), target_income_earned (how much should drivers be earning on the platform)
 # Ranks all available drivers by summing positive driver weights and negative passenger weights
@@ -154,7 +170,8 @@ def rank_drivers(dict_drivers, single_passenger_trip, driver_months_active_weigh
         else:
             driver_location = (driver["lat"], driver["lon"])
             passenger_location = (single_passenger_trip["pickup_lat"], single_passenger_trip["pickup_lon"])
-            passenger_wait_time = max(0, driver["end_trip_time"] - single_passenger_trip["trip_request_time"]) + (great_circle(driver_location, passenger_location).miles * TRAVEL_TIME_PER_VEHICLE_MILE)
+            route_distance, route_duration = getRouteMeta(driver_location, passenger_location)
+            passenger_wait_time = max(0, driver["end_trip_time"] - single_passenger_trip["trip_request_time"]) + route_duration
 
         # Pax Wait Time follows a cubed distribution: small at first but quickly grows in importance (no passenger wants to wait too long)
         passenger_wait_time_weight_calculated = (passenger_wait_time**2) * passenger_wait_time_weight
@@ -186,10 +203,10 @@ def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_mont
 
 seed(42)
 # Take a random sample of 10000 passenger trips
-random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 1000)
+random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 100)
 
 # Take a random sample of 1000 drivers
-random_sample_d = sample(range(1, len(DRIVERS_DICT)), 100)
+random_sample_d = sample(range(1, len(DRIVERS_DICT)), 10)
 
 
 # Cache all possible combinations of parameters
@@ -198,6 +215,7 @@ for i in range_of_values:
     for j in range_of_values:
         for k in range_of_values:
             print(i, j, k)
+            start_time = t.time()
 
             random_sample_passenger_trips_dict = {}
             for idx in random_sample_p:
@@ -221,6 +239,7 @@ for i in range_of_values:
             print(my_file)
             compress_json.dump(calculations, my_file)
 
+            print("TIME PASSED:", t.time() - start_time)
 
             #
             # lst_of_driver_months_active = []
