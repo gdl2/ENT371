@@ -5,6 +5,10 @@ import os
 import compress_json
 import requests
 import time as t
+from geopy.distance import great_circle
+
+#import asyncio
+#import aiohttp
 
 
 # Supplement driver data
@@ -132,17 +136,26 @@ with open("Jan0122Trips.csv", 'r', encoding='utf-8-sig') as file:
 
 print("NUMBER OF SINGLE-PASSENGER-TRIPS:", len(SINGLE_PASSENGER_TRIPS_DICT))
 
-def getRouteMeta(location1, location2):
-    loc = "{},{};{},{}".format(location1[1], location1[0], location2[1], location2[0])
-    url = "http://127.0.0.1:5000/route/v1/driving/"
-    r = requests.get(url + loc)
-    if r.status_code != 200:
-        return {}
-    res = r.json()
-    route_distance = res['routes'][0]['distance']
-    route_duration = res['routes'][0]['duration']
-    return route_distance, route_duration
+# async def get_route_distance_duration(session, url):
+#     async with session.get(url) as resp:
+#         res = await resp.json()
+#         route_distance = res['routes'][0]['distance']
+#         route_duration = res['routes'][0]['duration']
+#         return route_distance, route_duration
+#
+#
+# async def getDriversDriveTime(lst_driver_locations, passenger_location):
+#     async with aiohttp.ClientSession() as session:
+#         tasks = []
+#         url = "http://127.0.0.1:5000/route/v1/driving/"
+#         for driver_location in lst_driver_locations:
+#             loc = "{},{};{},{}".format(driver_location[1], driver_location[0], passenger_location[1], passenger_location[0])
+#             tasks.append(asyncio.ensure_future(get_route_distance_duration(session, url+loc)))
+#         lst_route_distance_duration = await asyncio.gather(*tasks)
+#
+#         return lst_route_distance_duration
 
+TRAVEL_TIME_PER_VEHICLE_MILE = 3
 
 def by_weight(elem):
     return elem[1]
@@ -150,10 +163,15 @@ def by_weight(elem):
 # Takes a single_passenger_trip object, driver_months_active_weight (how important is seniority), driver_income_earned_weight (how important is fairness), passenger_wait_time_weight (how important is decreasing passenger wait time), target_income_earned (how much should drivers be earning on the platform)
 # Ranks all available drivers by summing positive driver weights and negative passenger weights
 # Returns the top ranked driver to be assigned to the single_passenger_trip
-def rank_drivers(dict_drivers, single_passenger_trip, driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight, target_income_earned):
+def rank_drivers(dict_drivers, single_passenger_trip, driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight):
     # List of tuples that have drivers_id, weight, and passenger_wait_time
     # The heigher the driver weight, the higher their ranking
     lst_driversid_weight_passengerwaittime = []
+
+    # lst_driver_locations = [(driver["lat"], driver["lon"]) for driver in dict_drivers.values()]
+    # passenger_location = (single_passenger_trip["pickup_lat"], single_passenger_trip["pickup_lon"])
+    # lst_route_distance_duration = asyncio.run(getDriversDriveTime(lst_driver_locations, passenger_location))
+    # lst_drivers_drive_time = [tuple[1] for tuple in lst_route_distance_duration]
 
     for driverid, driver in dict_drivers.items():
         # Calculate driver total weight
@@ -170,8 +188,8 @@ def rank_drivers(dict_drivers, single_passenger_trip, driver_months_active_weigh
         else:
             driver_location = (driver["lat"], driver["lon"])
             passenger_location = (single_passenger_trip["pickup_lat"], single_passenger_trip["pickup_lon"])
-            route_distance, route_duration = getRouteMeta(driver_location, passenger_location)
-            passenger_wait_time = max(0, driver["end_trip_time"] - single_passenger_trip["trip_request_time"]) + route_duration
+            #route_distance, route_duration = getRouteMeta(driver_location, passenger_location)
+            passenger_wait_time = max(0, driver["end_trip_time"] - single_passenger_trip["trip_request_time"]) + (great_circle(driver_location, passenger_location).miles * TRAVEL_TIME_PER_VEHICLE_MILE) #lst_drivers_drive_time[driverid]
 
         # Pax Wait Time follows a cubed distribution: small at first but quickly grows in importance (no passenger wants to wait too long)
         passenger_wait_time_weight_calculated = (passenger_wait_time**2) * passenger_wait_time_weight
@@ -184,11 +202,11 @@ def rank_drivers(dict_drivers, single_passenger_trip, driver_months_active_weigh
     return sorted(lst_driversid_weight_passengerwaittime, key=by_weight, reverse = True)[0]
 
 
-def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight, target_income_earned):
+def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight):
     for passengerid, passenger_trip in dict_passenger_trips.items():
         #print("passengerid:", passengerid)
         # Get top ranked driver
-        driverid, _, passenger_wait_time = rank_drivers(dict_drivers, passenger_trip, driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight, target_income_earned)
+        driverid, _, passenger_wait_time = rank_drivers(dict_drivers, passenger_trip, driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight)
         # Assign top driver to passenger
         #print(driverid)
         top_driver = dict_drivers[driverid]
@@ -203,10 +221,10 @@ def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_mont
 
 seed(42)
 # Take a random sample of 10000 passenger trips
-random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 100)
+random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 10000)
 
 # Take a random sample of 1000 drivers
-random_sample_d = sample(range(1, len(DRIVERS_DICT)), 10)
+random_sample_d = sample(range(1, len(DRIVERS_DICT)), 1000)
 
 
 # Cache all possible combinations of parameters
@@ -225,8 +243,8 @@ for i in range_of_values:
             for idx in random_sample_d:
                 random_sample_drivers_dict[str(idx)] = DRIVERS_DICT[str(idx)].copy()
 
-            # Last 4 variables correspond to: driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight, target_income_earned
-            assign_drivers_to_passengers(random_sample_passenger_trips_dict, random_sample_drivers_dict, i, j, k, 100)
+            # Last 4 variables correspond to: driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight
+            assign_drivers_to_passengers(random_sample_passenger_trips_dict, random_sample_drivers_dict, i, j, k)
 
             calculations = {"DriverIncomes": [], "PassengerWaitTimes": []}
             for id, driver in random_sample_drivers_dict.items():
