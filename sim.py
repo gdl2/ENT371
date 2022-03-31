@@ -6,7 +6,6 @@ import compress_json
 import requests
 import time as t
 from geopy.distance import great_circle
-from scipy.optimize import minimize
 
 #import asyncio
 #import aiohttp
@@ -156,7 +155,7 @@ print("NUMBER OF SINGLE-PASSENGER-TRIPS:", len(SINGLE_PASSENGER_TRIPS_DICT))
 #
 #         return lst_route_distance_duration
 
-TRAVEL_TIME_PER_VEHICLE_MILE = 3
+TRAVEL_TIME_PER_VEHICLE_MILE = 180
 
 def by_weight(elem):
     return elem[1]
@@ -177,10 +176,10 @@ def rank_drivers(dict_drivers, single_passenger_trip, driver_months_active_weigh
     for driverid, driver in dict_drivers.items():
         # Calculate driver total weight
         # Seniority follows cube root distribution: importance of seniority reaches a limit after some number of months
-        driver_months_active_weight_calculated = (driver["months_active"]**(1/3)) * driver_months_active_weight
+        driver_months_active_weight_calculated = (driver["months_active"]**(1/3)) * (float(driver_months_active_weight)/float(100))
 
         # Fairness follows inverse distribution: very important at first, then falls to zero as income reaches a certain level
-        driver_income_earned_weight_calculated = (1000/(driver["income_earned"]+0.00001)) * driver_income_earned_weight # If driver earns more than target, this value becomes negative
+        driver_income_earned_weight_calculated = (1000/(driver["income_earned"]+0.00001)) * (float(driver_income_earned_weight)/float(100)) # If driver earns more than target, this value becomes negative
 
         # Need to calculate how long it takes for this driver to pickup the passenger at their location
         # If driver has not had a passenger thus far, spawn them on their first passenger
@@ -193,7 +192,7 @@ def rank_drivers(dict_drivers, single_passenger_trip, driver_months_active_weigh
             passenger_wait_time = max(0, driver["end_trip_time"] - single_passenger_trip["trip_request_time"]) + (great_circle(driver_location, passenger_location).miles * TRAVEL_TIME_PER_VEHICLE_MILE) #lst_drivers_drive_time[driverid]
 
         # Pax Wait Time follows a cubed distribution: small at first but quickly grows in importance (no passenger wants to wait too long)
-        passenger_wait_time_weight_calculated = (passenger_wait_time**2) * passenger_wait_time_weight
+        passenger_wait_time_weight_calculated = (passenger_wait_time**2) * (float(passenger_wait_time_weight)/float(100))
 
         driver_total_weight_calculated = driver_months_active_weight_calculated + driver_income_earned_weight_calculated - passenger_wait_time_weight_calculated
 
@@ -222,77 +221,42 @@ def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_mont
 
 seed(42)
 # Take a random sample of 10000 passenger trips
-random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 100)
+random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 150)
 
 # Take a random sample of 1000 drivers
-random_sample_d = sample(range(1, len(DRIVERS_DICT)), 10)
-
-def optimize(x):
-    print("iteration")
-    random_sample_passenger_trips_dict = {}
-    for idx in random_sample_p:
-        random_sample_passenger_trips_dict[str(idx)] = SINGLE_PASSENGER_TRIPS_DICT[str(idx)].copy()
-
-    random_sample_drivers_dict = {}
-    for idx in random_sample_d:
-        random_sample_drivers_dict[str(idx)] = DRIVERS_DICT[str(idx)].copy()
-
-    # Last 4 variables correspond to: driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight
-    assign_drivers_to_passengers(random_sample_passenger_trips_dict, random_sample_drivers_dict, x[0], x[1], x[2])
-    calculations = {"DriverIncomes": [], "PassengerWaitTimes": []}
-    for id, driver in random_sample_drivers_dict.items():
-        calculations["DriverIncomes"].append(driver["income_earned"])
-
-    a = np.array(calculations["DriverIncomes"])
-    driver_income_avg = np.mean(a)
-
-    for id, passenger in random_sample_passenger_trips_dict.items():
-        calculations["PassengerWaitTimes"].append(passenger["trip_wait_time"])
-
-    a = np.array(calculations["PassengerWaitTimes"])
-    pass_wait_time_avg = np.mean(a)
-
-    return pass_wait_time_avg - driver_income_avg*30
-
-
-x0 = np.array([20, 40, 40])
-res = minimize(optimize, x0, method='nelder-mead', options={'xatol': 1e-8, 'disp': True})
-print(res.x)
-
-
-
+random_sample_d = sample(range(1, len(DRIVERS_DICT)), 100)
 
 # Cache all possible combinations of parameters
-# range_of_values = range(0, 120, 20)
-# for i in range_of_values:
-#     for j in range_of_values:
-#         for k in range_of_values:
-#             print(i, j, k)
-#             start_time = t.time()
-#
-#             random_sample_passenger_trips_dict = {}
-#             for idx in random_sample_p:
-#                 random_sample_passenger_trips_dict[str(idx)] = SINGLE_PASSENGER_TRIPS_DICT[str(idx)].copy()
-#
-#             random_sample_drivers_dict = {}
-#             for idx in random_sample_d:
-#                 random_sample_drivers_dict[str(idx)] = DRIVERS_DICT[str(idx)].copy()
-#
-#             # Last 4 variables correspond to: driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight
-#             assign_drivers_to_passengers(random_sample_passenger_trips_dict, random_sample_drivers_dict, i, j, k)
-#
-#             calculations = {"DriverIncomes": [], "PassengerWaitTimes": []}
-#             for id, driver in random_sample_drivers_dict.items():
-#                 calculations["DriverIncomes"].append(driver["income_earned"])
-#
-#             for id, passenger in random_sample_passenger_trips_dict.items():
-#                 calculations["PassengerWaitTimes"].append(passenger["trip_wait_time"])
-#
-#             my_file = "static/{} {} {}.json.gz".format(i, j, k)
-#             print(my_file)
-#             compress_json.dump(calculations, my_file)
-#
-#             print("TIME PASSED:", t.time() - start_time)
+range_of_values = range(0, 120, 20)
+for i in range_of_values:
+    for j in range_of_values:
+        for k in range_of_values:
+            print(i, j, k)
+            start_time = t.time()
+
+            random_sample_passenger_trips_dict = {}
+            for idx in random_sample_p:
+                random_sample_passenger_trips_dict[str(idx)] = SINGLE_PASSENGER_TRIPS_DICT[str(idx)].copy()
+
+            random_sample_drivers_dict = {}
+            for idx in random_sample_d:
+                random_sample_drivers_dict[str(idx)] = DRIVERS_DICT[str(idx)].copy()
+
+            # Last 4 variables correspond to: driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight
+            assign_drivers_to_passengers(random_sample_passenger_trips_dict, random_sample_drivers_dict, i, j, k)
+
+            calculations = {"DriverIncomes": [], "PassengerWaitTimes": []}
+            for id, driver in random_sample_drivers_dict.items():
+                calculations["DriverIncomes"].append(driver["income_earned"])
+
+            for id, passenger in random_sample_passenger_trips_dict.items():
+                calculations["PassengerWaitTimes"].append(passenger["trip_wait_time"])
+
+            my_file = "static/{} {} {}.json.gz".format(i, j, k)
+            print(my_file)
+            compress_json.dump(calculations, my_file)
+
+            print("TIME PASSED:", t.time() - start_time)
 
             #
             # lst_of_driver_months_active = []
