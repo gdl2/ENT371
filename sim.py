@@ -162,20 +162,23 @@ print("NUMBER OF SINGLE-PASSENGER-TRIPS:", len(SINGLE_PASSENGER_TRIPS_DICT))
 
 TRAVEL_TIME_PER_VEHICLE_MILE = 180
 
-def by_weight(elem):
-    return elem[1]
+def by_second_elem(tuple):
+    return tuple[1]
 
 # Takes a single_passenger_trip object, driver_months_active_weight (how important is seniority), driver_income_earned_weight (how important is fairness), passenger_wait_time_weight (how important is decreasing passenger wait time), target_income_earned (how much should drivers be earning on the platform)
 # Ranks all available drivers by summing positive driver weights and negative passenger weights
-# Returns the top ranked driver to be assigned to the single_passenger_trip
-def rank_drivers(dict_drivers, single_passenger_trip, driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight):
-    # List of tuples that have drivers_id, weight, and passenger_wait_time
-    # The heigher the driver weight, the higher their ranking
-    lst_driversid_weight_passengerwaittime = []
+# Returns the driver object to be assigned to the single_passenger_trip
+def rank_drivers(dict_drivers, single_passenger_trip, driver_seniority_weight, driver_fairness_weight, driver_waittime_weight):
+    # Rankings of drivers within parameters (lower is better)
+    # List of tuples: (driverid, seniority)
+    seniority_ranking = []
+    # List of tuples: (driverid, fairness)
+    fairness_ranking = []
+    # List of tuples: (driverid, waittime)
+    waittime_ranking = []
 
-    seniority_ranking =
-    fairness_ranking =
-    waittime_ranking = 
+    # Final ranking of drivers (lower is better)
+    final_driver_ranking = []
 
     # lst_driver_locations = [(driver["lat"], driver["lon"]) for driver in dict_drivers.values()]
     # passenger_location = (single_passenger_trip["pickup_lat"], single_passenger_trip["pickup_lon"])
@@ -183,39 +186,42 @@ def rank_drivers(dict_drivers, single_passenger_trip, driver_months_active_weigh
     # lst_drivers_drive_time = [tuple[1] for tuple in lst_route_distance_duration]
 
     for driverid, driver in dict_drivers.items():
-        # Calculate driver total weight
-        # Seniority follows cube root distribution: importance of seniority reaches a limit after some number of months
-        driver_months_active_weight_calculated = (driver["months_active"]**(1/3)) * (float(driver_months_active_weight)/float(100))
+        seniority_ranking.append((driverid, driver["months_active"]))
+        fairness_ranking.append((driverid, driver["income_earned"]))
+        driver_location = (driver["lat"], driver["lon"])
+        passenger_location = (single_passenger_trip["pickup_lat"], single_passenger_trip["pickup_lon"])
+        #route_distance, route_duration = getRouteMeta(driver_location, passenger_location)
+        passenger_wait_time = max(0, driver["end_trip_time"] - single_passenger_trip["trip_request_time"]) + (great_circle(driver_location, passenger_location).miles * TRAVEL_TIME_PER_VEHICLE_MILE) #lst_drivers_drive_time[driverid]
+        waittime_ranking.append((driverid, passenger_wait_time))
 
-        # Fairness follows inverse distribution: very important at first, then falls to zero as income reaches a certain level
-        driver_income_earned_weight_calculated = (1000/(driver["income_earned"]+0.00001)) * (float(driver_income_earned_weight)/float(100)) # If driver earns more than target, this value becomes negative
+    seniority_ranking.sort(reverse=True, key=by_second_elem)
+    fairness_ranking.sort(reverse=False, key=by_second_elem)
+    waittime_ranking.sort(reverse=False, key=by_second_elem)
 
-        # Need to calculate how long it takes for this driver to pickup the passenger at their location
-        # If driver has not had a passenger thus far, spawn them on their first passenger
-        if driver["lat"] is None and driver["lon"] is None:
-            passenger_wait_time = 0
-        else:
-            driver_location = (driver["lat"], driver["lon"])
-            passenger_location = (single_passenger_trip["pickup_lat"], single_passenger_trip["pickup_lon"])
-            #route_distance, route_duration = getRouteMeta(driver_location, passenger_location)
-            passenger_wait_time = max(0, driver["end_trip_time"] - single_passenger_trip["trip_request_time"]) + (great_circle(driver_location, passenger_location).miles * TRAVEL_TIME_PER_VEHICLE_MILE) #lst_drivers_drive_time[driverid]
+    seniority_ranking_driverid = [tuple[0] for tuple in seniority_ranking]
+    fairness_ranking_driverid = [tuple[0] for tuple in fairness_ranking]
+    waittime_ranking_driverid = [tuple[0] for tuple in waittime_ranking]
 
-        # Pax Wait Time follows a cubed distribution: small at first but quickly grows in importance (no passenger wants to wait too long)
-        passenger_wait_time_weight_calculated = (passenger_wait_time**2) * (float(passenger_wait_time_weight)/float(100))
+    for driverid in dict_drivers.keys():
+        driver_seniority_ranking = seniority_ranking_driverid.index(driverid)
+        driver_fairness_ranking = fairness_ranking_driverid.index(driverid)
+        driver_waittime_ranking = waittime_ranking_driverid.index(driverid)
 
-        driver_total_weight_calculated = driver_months_active_weight_calculated + driver_income_earned_weight_calculated - passenger_wait_time_weight_calculated
+        driver_overall_score = driver_seniority_ranking * driver_seniority_weight + driver_fairness_ranking * driver_fairness_weight + driver_waittime_ranking * driver_waittime_weight
 
-        lst_driversid_weight_passengerwaittime.append([driverid, driver_total_weight_calculated, passenger_wait_time])
+        final_driver_ranking.append((driverid, driver_overall_score))
 
-
-    return sorted(lst_driversid_weight_passengerwaittime, key=by_weight, reverse = True)[0]
+    final_driver_ranking.sort(reverse=False, key=by_second_elem)
+    print(final_driver_ranking)
+    top_driver_id = final_driver_ranking[0][0]
+    return top_driver_id, passenger_wait_time
 
 
 def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight):
     for passengerid, passenger_trip in dict_passenger_trips.items():
         #print("passengerid:", passengerid)
         # Get top ranked driver
-        driverid, _, passenger_wait_time = rank_drivers(dict_drivers, passenger_trip, driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight)
+        driverid, passenger_wait_time = rank_drivers(dict_drivers, passenger_trip, driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight)
         # Assign top driver to passenger
         #print(driverid)
         top_driver = dict_drivers[driverid]
@@ -229,14 +235,14 @@ def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_mont
 
 
 seed(42)
-# Take a random sample of 10000 passenger trips
-random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 1000)
+# Take a random sample of _ passenger trips
+random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 10)
 
-# Take a random sample of 1000 drivers
-random_sample_d = sample(range(1, len(DRIVERS_DICT)), 100)
+# Take a random sample of _ drivers
+random_sample_d = sample(range(1, len(DRIVERS_DICT)), 10)
 
 # Cache all possible combinations of parameters - reduces CPU usage on server and allows low latency to user
-range_of_values = range(0, 120, 20)
+range_of_values = [0, .2, .4, .6, .8, 1]
 for i in range_of_values:
     for j in range_of_values:
         for k in range_of_values:
