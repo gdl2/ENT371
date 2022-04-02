@@ -1,3 +1,4 @@
+# Import the following libraries
 import csv
 import numpy as np
 from random import sample, seed
@@ -18,10 +19,12 @@ from geopy.distance import great_circle
 # The driver wants to minimize time_driving per day
 # (Currently ignoring cost of vehicle miles driven)
 
+# Dictionary for driver objects
 DRIVERS_DICT = {}
 
 # Read the csv file
 with open("Jan22Drivers.csv", 'r', encoding='utf-8-sig') as file:
+    # Init csvreader object of file
     csvreader = csv.reader(file)
     # Extract column headers
     header = next(csvreader)
@@ -33,8 +36,10 @@ with open("Jan22Drivers.csv", 'r', encoding='utf-8-sig') as file:
     driver_id = 0
     # Iterate through rows
     for row in csvreader:
-        driver = {} # create driver
+        # Create driver object for each row in file
+        driver = {}
 
+        # Populate values for driver by indexing into the spreadsheet
         driver["home_zipcode"] = row[home_zipcode_index]
 
         curr_year_month = row[month_reported_index].split("-")
@@ -168,6 +173,10 @@ def rank_drivers(dict_drivers, single_passenger_trip, driver_months_active_weigh
     # The heigher the driver weight, the higher their ranking
     lst_driversid_weight_passengerwaittime = []
 
+    seniority_ranking =
+    fairness_ranking =
+    waittime_ranking = 
+
     # lst_driver_locations = [(driver["lat"], driver["lon"]) for driver in dict_drivers.values()]
     # passenger_location = (single_passenger_trip["pickup_lat"], single_passenger_trip["pickup_lon"])
     # lst_route_distance_duration = asyncio.run(getDriversDriveTime(lst_driver_locations, passenger_location))
@@ -221,12 +230,12 @@ def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_mont
 
 seed(42)
 # Take a random sample of 10000 passenger trips
-random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 150)
+random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 1000)
 
 # Take a random sample of 1000 drivers
 random_sample_d = sample(range(1, len(DRIVERS_DICT)), 100)
 
-# Cache all possible combinations of parameters
+# Cache all possible combinations of parameters - reduces CPU usage on server and allows low latency to user
 range_of_values = range(0, 120, 20)
 for i in range_of_values:
     for j in range_of_values:
@@ -234,10 +243,12 @@ for i in range_of_values:
             print(i, j, k)
             start_time = t.time()
 
+            # Make copy of random sample of passenger trips each iteration, otherwise values from previous iteration are passed over
             random_sample_passenger_trips_dict = {}
             for idx in random_sample_p:
                 random_sample_passenger_trips_dict[str(idx)] = SINGLE_PASSENGER_TRIPS_DICT[str(idx)].copy()
 
+            # Make copy of random sample of drivers each iteration, otherwise values from previous iteration are passed over
             random_sample_drivers_dict = {}
             for idx in random_sample_d:
                 random_sample_drivers_dict[str(idx)] = DRIVERS_DICT[str(idx)].copy()
@@ -246,14 +257,18 @@ for i in range_of_values:
             assign_drivers_to_passengers(random_sample_passenger_trips_dict, random_sample_drivers_dict, i, j, k)
 
             calculations = {"DriverIncomes": [], "PassengerWaitTimes": []}
+            # Record the driver income for each driver in our sample
             for id, driver in random_sample_drivers_dict.items():
                 calculations["DriverIncomes"].append(driver["income_earned"])
 
+            # Record the passenger wait time for each passenger in our sample
             for id, passenger in random_sample_passenger_trips_dict.items():
                 calculations["PassengerWaitTimes"].append(passenger["trip_wait_time"])
 
             my_file = "static/{} {} {}.json.gz".format(i, j, k)
             print(my_file)
+
+            # Cache the compressed driver incomes and passenger wait times in the static folder
             compress_json.dump(calculations, my_file)
 
             print("TIME PASSED:", t.time() - start_time)

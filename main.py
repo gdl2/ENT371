@@ -11,6 +11,7 @@ app = Flask("__main__", template_folder=os.path.join(THIS_FOLDER, "templates"))
 @app.route("/")
 @app.route("/index")
 def index():
+    # Render the graphs initially at all 0 weights
     seniority_weight = 0
     fairness_weight = 0
     waittime_weight = 0
@@ -23,6 +24,7 @@ def index():
 
 @app.route("/update_graphs", methods=['GET'])
 def update_graphs():
+    # Get weight and parameters from user
     seniority_weight = request.args.get('seniority_weight', default = 0, type = int)
     fairness_weight = request.args.get('fairness_weight', default = 0, type = int)
     waittime_weight = request.args.get('waittime_weight', default = 0, type = int)
@@ -32,6 +34,9 @@ def update_graphs():
 
     print(seniority_optimize, fairness_optimize, waittime_optimize)
 
+    # Optimize: Run through all possible combinations of unlocked values (values that user selected to optimize)
+    # and return the combination of seniority, fairness, and wait time weights that minimize the difference between
+    # averages of passenger wait time (less is better) and negative driver income (more is better) 
     possible_combinations = []
     range_of_values = range(0, 120, 20)
     if seniority_optimize:
@@ -74,4 +79,4 @@ def update_graphs():
     return calculations
 
 #Comment out before updating PythonAnywhere
-#app.run()
+app.run()
