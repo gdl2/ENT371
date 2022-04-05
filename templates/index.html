@@ -26,10 +26,10 @@
     </div>
 
     <div class="container d-flex justify-content-center">
-      <div class="form-group jumbotron my-auto">
+      <div class="form-group jumbotron my-auto" style="width: 50%;">
       <form action="/" id="form">
           <label for="seniority_weight" class="form-label">Seniority Weight</label>
-          <input type="range" name="seniority_weight" class="form-range" value="0" min="0" max="100" step="20" id="seniority_weight" oninput="seniority_weight_output.value = map_values_to_importance[this.value]; submitForm();"><output id="seniority_weight_output">Not Important</output>
+          <input type="range" name="seniority_weight" class="form-range" value="0" min="0" max="1" step=".2" id="seniority_weight" oninput="seniority_weight_output.value = map_values_to_importance[this.value]; submitForm();"><output id="seniority_weight_output">Not Important</output>
           <div class="form-check">
             <input class="form-check-input" type="checkbox" value="" id="seniority_checkbox" oninput="$('#seniority_weight').prop('disabled', $('#seniority_checkbox').is(':checked'));">
             <label class="form-check-label" for="seniority_checkbox">
@@ -39,7 +39,7 @@
           <br />
 
           <label for="fairness_weight" class="form-label">Fairness Weight</label>
-          <input type="range" name="fairness_weight" class="form-range" value="0" min="0" max="100" step="20" id="fairness_weight" oninput="fairness_weight_output.value = map_values_to_importance[this.value]; submitForm();"><output id="fairness_weight_output">Not Important</output>
+          <input type="range" name="fairness_weight" class="form-range" value="0" min="0" max="1" step=".2" id="fairness_weight" oninput="fairness_weight_output.value = map_values_to_importance[this.value]; submitForm();"><output id="fairness_weight_output">Not Important</output>
           <div class="form-check">
             <input class="form-check-input" type="checkbox" value="" id="fairness_checkbox" oninput="$('#fairness_weight').prop('disabled', $('#fairness_checkbox').is(':checked'));">
             <label class="form-check-label" for="fairness_checkbox">
@@ -49,7 +49,7 @@
           <br />
 
           <label for="waittime_weight" class="form-label">Passenger Wait Time Weight</label>
-          <input type="range" name="waittime_weight" class="form-range" value="0" min="0" max="100" step="20" id="waittime_weight" oninput="waittime_weight_output.value = map_values_to_importance[this.value]; submitForm();"><output id="waittime_weight_output">Not Important</output>
+          <input type="range" name="waittime_weight" class="form-range" value="0" min="0" max="1" step=".2" id="waittime_weight" oninput="waittime_weight_output.value = map_values_to_importance[this.value]; submitForm();"><output id="waittime_weight_output">Not Important</output>
           <div class="form-check">
             <input class="form-check-input" type="checkbox" value="" id="waittime_checkbox" oninput="$('#waittime_weight').prop('disabled', $('#waittime_checkbox').is(':checked'));">
             <label class="form-check-label" for="waittime_checkbox">
@@ -68,11 +68,11 @@
     <script>
       var map_values_to_importance = {
         "0": "Not Important",
-        "20": "Less Important",
-        "40": "Somewhat Important",
-        "60": "More important",
-        "80": "Very Important",
-        "100": "Extremely Important"
+        "0.2": "Less Important",
+        "0.4": "Somewhat Important",
+        "0.6": "More important",
+        "0.8": "Very Important",
+        "1": "Extremely Important"
       };
 
       var driver_income_histogram = {

@@ -188,10 +188,13 @@ def rank_drivers(dict_drivers, single_passenger_trip, driver_seniority_weight, d
     for driverid, driver in dict_drivers.items():
         seniority_ranking.append((driverid, driver["months_active"]))
         fairness_ranking.append((driverid, driver["income_earned"]))
-        driver_location = (driver["lat"], driver["lon"])
-        passenger_location = (single_passenger_trip["pickup_lat"], single_passenger_trip["pickup_lon"])
-        #route_distance, route_duration = getRouteMeta(driver_location, passenger_location)
-        passenger_wait_time = max(0, driver["end_trip_time"] - single_passenger_trip["trip_request_time"]) + (great_circle(driver_location, passenger_location).miles * TRAVEL_TIME_PER_VEHICLE_MILE) #lst_drivers_drive_time[driverid]
+        if driver["lat"] is None and driver["lon"] is None:
+            passenger_wait_time = 0
+        else:
+            driver_location = (driver["lat"], driver["lon"])
+            passenger_location = (single_passenger_trip["pickup_lat"], single_passenger_trip["pickup_lon"])
+            #route_distance, route_duration = getRouteMeta(driver_location, passenger_location)
+            passenger_wait_time = max(0, driver["end_trip_time"] - single_passenger_trip["trip_request_time"]) + (great_circle(driver_location, passenger_location).miles * TRAVEL_TIME_PER_VEHICLE_MILE) #lst_drivers_drive_time[driverid]
         waittime_ranking.append((driverid, passenger_wait_time))
 
     seniority_ranking.sort(reverse=True, key=by_second_elem)
@@ -219,7 +222,6 @@ def rank_drivers(dict_drivers, single_passenger_trip, driver_seniority_weight, d
 
 def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight):
     for passengerid, passenger_trip in dict_passenger_trips.items():
-        #print("passengerid:", passengerid)
         # Get top ranked driver
         driverid, passenger_wait_time = rank_drivers(dict_drivers, passenger_trip, driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight)
         # Assign top driver to passenger
@@ -239,10 +241,10 @@ seed(42)
 random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 10)
 
 # Take a random sample of _ drivers
-random_sample_d = sample(range(1, len(DRIVERS_DICT)), 10)
+random_sample_d = sample(range(1, len(DRIVERS_DICT)), 5)
 
 # Cache all possible combinations of parameters - reduces CPU usage on server and allows low latency to user
-range_of_values = [0, .2, .4, .6, .8, 1]
+range_of_values = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 for i in range_of_values:
     for j in range_of_values:
         for k in range_of_values:
