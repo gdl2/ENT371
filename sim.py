@@ -1,7 +1,7 @@
 # Import the following libraries
 import csv
 import numpy as np
-from random import sample, seed
+from random import sample, seed, uniform
 import os
 import compress_json
 import requests
@@ -50,8 +50,11 @@ with open("Jan22Drivers.csv", 'r', encoding='utf-8-sig') as file:
         driver["income_earned"] = 0 # Will be updated in matching
         driver["time_driving"] = 0 # Will be updated in matching
         driver["end_trip_time"] = 0 # Will be updated in matching
-        driver["lat"] = None # Will be updated in matching
-        driver["lon"] = None # Will be updated in matching
+
+        driver["lat"] = uniform(41.750385, 41.970302) # Will be updated in matching
+        driver["lon"] = uniform(-87.807670, -87.623831) # Will be updated in matching
+
+        driver["total_drive_time"] = [] # Will be updated in matching
 
         driver_id += 1
 
@@ -91,7 +94,7 @@ with open("Jan0122Trips.csv", 'r', encoding='utf-8-sig') as file:
     # Generate request start times for passenger trips
     mu, sigma = 1, 1 # mean and standard deviation
     trip_wait_time = np.random.lognormal(mu, sigma, 100000)
-    trip_wait_time = [min(elem, 15) for elem in trip_wait_time]
+    trip_wait_time = [min(elem, 15) for elem in trip_wait_time] # in minutes
 
     num_null_rows = 0
     rider_id = 0
@@ -110,7 +113,7 @@ with open("Jan0122Trips.csv", 'r', encoding='utf-8-sig') as file:
             trip_start_time = hour_to_seconds + minutes_to_seconds + pm_to_seconds
             single_passenger_trip["trip_start_time"] = trip_start_time
 
-            single_passenger_trip["trip_request_time"] = max(trip_start_time - trip_wait_time[rider_id], 0) # Cannot be negative
+            single_passenger_trip["trip_request_time"] = max(trip_start_time - trip_wait_time[rider_id]*60, 0) # Cannot be negative
 
             trip_duration = int(row[trip_duration_index])
             single_passenger_trip["trip_duration"] = trip_duration
@@ -189,11 +192,13 @@ def rank_drivers(dict_drivers, single_passenger_trip, driver_seniority_weight, d
         seniority_ranking.append((driverid, driver["months_active"]))
         fairness_ranking.append((driverid, driver["income_earned"]))
         if driver["lat"] is None and driver["lon"] is None:
-            passenger_wait_time = 0
+            raise Exception("Driver location can't be None")
         else:
             driver_location = (driver["lat"], driver["lon"])
             passenger_location = (single_passenger_trip["pickup_lat"], single_passenger_trip["pickup_lon"])
+
             #route_distance, route_duration = getRouteMeta(driver_location, passenger_location)
+            #print(sum(driver["total_drive_time"]), single_passenger_trip["trip_request_time"])
             passenger_wait_time = max(0, driver["end_trip_time"] - single_passenger_trip["trip_request_time"]) + (great_circle(driver_location, passenger_location).miles * TRAVEL_TIME_PER_VEHICLE_MILE) #lst_drivers_drive_time[driverid]
         waittime_ranking.append((driverid, passenger_wait_time))
 
@@ -215,13 +220,13 @@ def rank_drivers(dict_drivers, single_passenger_trip, driver_seniority_weight, d
         final_driver_ranking.append((driverid, driver_overall_score))
 
     final_driver_ranking.sort(reverse=False, key=by_second_elem)
-    print(final_driver_ranking)
     top_driver_id = final_driver_ranking[0][0]
     return top_driver_id, passenger_wait_time
 
 
 def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight):
     for passengerid, passenger_trip in dict_passenger_trips.items():
+        #print("passengerid:", passengerid)
         # Get top ranked driver
         driverid, passenger_wait_time = rank_drivers(dict_drivers, passenger_trip, driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight)
         # Assign top driver to passenger
@@ -234,14 +239,20 @@ def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_mont
         passenger_trip["trip_wait_time"] = passenger_wait_time
         passenger_trip["trip_start_time"] = passenger_trip["trip_request_time"] + passenger_wait_time
         top_driver["end_trip_time"] = passenger_trip["trip_start_time"] + passenger_trip["trip_duration"]
+        total_drive_time = passenger_trip["trip_duration"] + passenger_trip["trip_wait_time"]
+        top_driver["total_drive_time"].append(total_drive_time)
 
 
 seed(42)
 # Take a random sample of _ passenger trips
 random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 10)
+random_sample_p.sort()
+print(random_sample_p)
 
 # Take a random sample of _ drivers
-random_sample_d = sample(range(1, len(DRIVERS_DICT)), 5)
+random_sample_d = sample(range(1, len(DRIVERS_DICT)), 10)
+random_sample_d.sort()
+print(random_sample_d)
 
 # Cache all possible combinations of parameters - reduces CPU usage on server and allows low latency to user
 range_of_values = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
