@@ -54,7 +54,7 @@ with open("Jan22Drivers.csv", 'r', encoding='utf-8-sig') as file:
         driver["lat"] = uniform(41.750385, 41.970302) # Will be updated in matching
         driver["lon"] = uniform(-87.807670, -87.623831) # Will be updated in matching
 
-        driver["total_drive_time"] = [] # Will be updated in matching
+        driver["lst_passenger_trips"] = [] # Will be updated in matching
 
         driver_id += 1
 
@@ -239,8 +239,7 @@ def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_mont
         passenger_trip["trip_wait_time"] = passenger_wait_time
         passenger_trip["trip_start_time"] = passenger_trip["trip_request_time"] + passenger_wait_time
         top_driver["end_trip_time"] = passenger_trip["trip_start_time"] + passenger_trip["trip_duration"]
-        total_drive_time = passenger_trip["trip_duration"] + passenger_trip["trip_wait_time"]
-        top_driver["total_drive_time"].append(total_drive_time)
+        top_driver["lst_passenger_trips"].append(passenger_trip)
 
 
 seed(42)
@@ -271,14 +270,19 @@ for i in range_of_values:
             random_sample_drivers_dict = {}
             for idx in random_sample_d:
                 random_sample_drivers_dict[str(idx)] = DRIVERS_DICT[str(idx)].copy()
+                random_sample_drivers_dict[str(idx)]["lst_passenger_trips"] = []
 
             # Last 4 variables correspond to: driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight
             assign_drivers_to_passengers(random_sample_passenger_trips_dict, random_sample_drivers_dict, i, j, k)
 
-            calculations = {"DriverIncomes": [], "PassengerWaitTimes": []}
+            calculations = {"DriverObjects": [], "DriverIncomes": [], "PassengerWaitTimes": [], "DriverTableColumns": 0}
             # Record the driver income for each driver in our sample
+            max_passenger_trips = 0
             for id, driver in random_sample_drivers_dict.items():
+                calculations["DriverObjects"].append(driver)
+                max_passenger_trips = max(max_passenger_trips, len(driver["lst_passenger_trips"]))
                 calculations["DriverIncomes"].append(driver["income_earned"])
+            calculations["DriverTableColumns"] = max_passenger_trips
 
             # Record the passenger wait time for each passenger in our sample
             for id, passenger in random_sample_passenger_trips_dict.items():
@@ -287,7 +291,7 @@ for i in range_of_values:
             my_file = "static/{} {} {}.json.gz".format(i, j, k)
             print(my_file)
 
-            # Cache the compressed driver incomes and passenger wait times in the static folder
+            # Cache the compressed driver objects, driver incomes and passenger wait times in the static folder
             compress_json.dump(calculations, my_file)
 
             print("TIME PASSED:", t.time() - start_time)

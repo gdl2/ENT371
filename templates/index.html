@@ -62,6 +62,30 @@
       </div>
     </div>
 
+    <div id="driver_table">
+      <table class="table">
+        <!-- Table headers -->
+        <thead>
+          <tr>
+            <th scope="col">Driver</th>
+            {% for i in range(0, maxTableCols) %}
+            <th scope="col">Passenger Trip {{i+1}}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+        {% for i in range(0, calculations["DriverObjects"]|length) %}
+        <tr>
+          <td>Income: ${{calculations["DriverObjects"][i]["income_earned"]|round}}<br>Months Active: {{calculations["DriverObjects"][i]["months_active"]}}</td>
+          {% for n in range(0, calculations["DriverObjects"][i]["lst_passenger_trips"]|length) %}
+          <td>Trip Start Time: {{calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_start_time"]|round}} s<br>Wait Time: {{calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_wait_time"]|round}} s<br>Trip Cost: ${{calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_cost"]|round}}<br>Trip Length: {{calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_length"]|round}} mi</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      </table>
+    </div>
+
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
@@ -124,6 +148,8 @@
         };
         var data = [passenger_wait_time_histogram];
         Plotly.react('PassengerWaitTimesHistogram', data, passenger_wait_time_histogram_layout, config);
+
+        $('#driver_table').html(calculations["new_driver_table"]);
 
         $("#seniority_weight").val(calculations["i"]);
         $('#seniority_weight_output').val(map_values_to_importance[calculations["i"]]);
