@@ -115,4 +115,4 @@ def update_graphs():
     return calculations
 
 #Comment out before updating PythonAnywhere
-app.run()
+#app.run()
