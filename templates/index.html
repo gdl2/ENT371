@@ -78,7 +78,7 @@
         <tr>
           <td>Income: ${{calculations["DriverObjects"][i]["income_earned"]|round}}<br>Months Active: {{calculations["DriverObjects"][i]["months_active"]}}</td>
           {% for n in range(0, calculations["DriverObjects"][i]["lst_passenger_trips"]|length) %}
-          <td>Trip Start Time: {{calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_start_time"]|round}} s<br>Wait Time: {{calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_wait_time"]|round}} s<br>Trip Cost: ${{calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_cost"]|round}}<br>Trip Length: {{calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_length"]|round}} mi</td>
+          <td>Trip Start Time: {{calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_start_time"]|round}} s<br>Wait Time: {{calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_wait_time"]|round}} s<br>Trip Cost: ${{calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_cost"]|round}}<br>Trip Length: {{calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_length"]|round}} mi<br>Trip Duration: {{calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_duration"]|round}} s</td>
           {% endfor %}
         </tr>
         {% endfor %}
@@ -90,6 +90,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
     <script>
+      console.log(CALCULATIONS);
       var map_values_to_importance = {
         "0": "Not Important",
         "0.2": "Less Important",

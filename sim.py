@@ -90,6 +90,7 @@ with open("Jan0122Trips.csv", 'r', encoding='utf-8-sig') as file:
     pickup_lon_index = header.index("Pickup Centroid Longitude")
     dropoff_lat_index = header.index("Dropoff Centroid Latitude")
     dropoff_lon_index = header.index("Dropoff Centroid Longitude")
+    trip_total_index = header.index("Trip Total")
 
     # Generate request start times for passenger trips
     mu, sigma = 1, 1 # mean and standard deviation
@@ -101,7 +102,7 @@ with open("Jan0122Trips.csv", 'r', encoding='utf-8-sig') as file:
     # Iterate through rows
     for row in csvreader:
         # Make sure row has no entries missing
-        if row[trip_start_time_index] and row[trip_duration_index] and row[trip_length_index] and row[pickup_lat_index] and row[pickup_lon_index] and row[dropoff_lat_index] and row[dropoff_lon_index]:
+        if row[trip_start_time_index] and row[trip_duration_index] and row[trip_length_index] and row[pickup_lat_index] and row[pickup_lon_index] and row[dropoff_lat_index] and row[dropoff_lon_index] and row[trip_total_index]:
             single_passenger_trip = {} # create passenger_trip
 
             date, time, ampm = row[trip_start_time_index].split()
@@ -121,7 +122,7 @@ with open("Jan0122Trips.csv", 'r', encoding='utf-8-sig') as file:
             trip_length = float(row[trip_length_index])
             single_passenger_trip["trip_length"] = trip_length
 
-            trip_cost = COST_PER_VEHICLE_MILE * trip_length + COST_PER_DRIVER_MINUTE * (trip_duration % 60)
+            trip_cost = float(row[trip_total_index])
             single_passenger_trip["trip_cost"] = trip_cost
 
             pickup_lat = float(row[pickup_lat_index])
@@ -244,7 +245,7 @@ def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_mont
 
 seed(42)
 # Take a random sample of _ passenger trips
-random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 10)
+random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 20)
 random_sample_p.sort()
 print(random_sample_p)
 

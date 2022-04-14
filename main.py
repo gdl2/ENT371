@@ -38,45 +38,49 @@ def update_graphs():
     # Optimize: Run through all possible combinations of unlocked values (values that user selected to optimize)
     # and return the combination of seniority, fairness, and wait time weights that minimize the difference between
     # averages of passenger wait time (less is better) and negative driver income (more is better)
-    possible_combinations = []
-    range_of_values = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
-    if seniority_optimize:
-        seniority_values = range_of_values
-    else:
-        seniority_values = [seniority_weight]
-    if fairness_optimize:
-        fairness_values = range_of_values
-    else:
-        fairness_values = [fairness_weight]
-    if waittime_optimize:
-        waittime_values = range_of_values
-    else:
-        waittime_values = [waittime_weight]
+    # possible_combinations = []
+    # range_of_values = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    # if seniority_optimize:
+    #     seniority_values = range_of_values
+    # else:
+    #     seniority_values = [seniority_weight]
+    # if fairness_optimize:
+    #     fairness_values = range_of_values
+    # else:
+    #     fairness_values = [fairness_weight]
+    # if waittime_optimize:
+    #     waittime_values = range_of_values
+    # else:
+    #     waittime_values = [waittime_weight]
+    #
+    # best_diff_averages = float('inf')
+    # best_combination = [0.0, 0.0, 0.0]
+    # for i in seniority_values:
+    #     for j in fairness_values:
+    #         for k in waittime_values:
+    #             print(i, j, k)
+    #
+    #             my_file = os.path.join(THIS_FOLDER, "static", "{} {} {}.json.gz".format(i, j, k))
+    #             calculations = compress_json.load(my_file)
+    #
+    #             # Try to minimize the sum of passenger wait time (smaller better) and negative driver incomes (larger better)
+    #             diff_averages = np.mean(calculations["PassengerWaitTimes"]) - np.mean(calculations["DriverIncomes"]) * 1000
+    #             if diff_averages < best_diff_averages:
+    #                 best_diff_averages = diff_averages
+    #                 best_combination = [i, j, k]
+    #                 print("Update best:", best_combination)
+    #
+    # i, j, k = best_combination
+    # i, j, k = seniority_weight, fairness_weight, waittime_weight
+    # my_file = os.path.join(THIS_FOLDER, "static", "{} {} {}.json.gz".format(i, j, k))
+    # calculations = compress_json.load(my_file)
+    # calculations["i"] = i
+    # calculations["j"] = j
+    # calculations["k"] = k
 
-    best_diff_averages = float('inf')
-    best_combination = [0.0, 0.0, 0.0]
-    for i in seniority_values:
-        for j in fairness_values:
-            for k in waittime_values:
-                print(i, j, k)
 
-                my_file = os.path.join(THIS_FOLDER, "static", "{} {} {}.json.gz".format(i, j, k))
-                calculations = compress_json.load(my_file)
-
-                # Try to minimize the sum of passenger wait time (smaller better) and negative driver incomes (larger better)
-                diff_averages = np.mean(calculations["PassengerWaitTimes"]) - np.mean(calculations["DriverIncomes"]) * 1000
-                if diff_averages < best_diff_averages:
-                    best_diff_averages = diff_averages
-                    best_combination = [i, j, k]
-                    print("Update best:", best_combination)
-
-    i, j, k = best_combination
-    i, j, k = seniority_weight, fairness_weight, waittime_weight
-    my_file = os.path.join(THIS_FOLDER, "static", "{} {} {}.json.gz".format(i, j, k))
+    my_file = os.path.join(THIS_FOLDER, "static", "{} {} {}.json.gz".format(seniority_weight, fairness_weight, waittime_weight))
     calculations = compress_json.load(my_file)
-    calculations["i"] = i
-    calculations["j"] = j
-    calculations["k"] = k
 
     maxTableCols = int(calculations["DriverTableColumns"])
     thead_cols = ""
@@ -90,11 +94,12 @@ def update_graphs():
             if n >= len(calculations["DriverObjects"][i]["lst_passenger_trips"]):
                 tbody += "<td></td>"
             else:
-                tbody += "<td>Trip Start Time: {} s<br>Wait Time: {} s<br>Trip Cost: ${}<br>Trip Length: {} mi</td>".format(
+                tbody += "<td>Trip Start Time: {} s<br>Wait Time: {} s<br>Trip Cost: ${}<br>Trip Length: {} mi<br>Trip Duration: {} s</td>".format(
                 round(calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_start_time"]),
                 round(calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_wait_time"]),
                 round(calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_cost"]),
-                round(calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_length"]))
+                round(calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_length"]),
+                round(calculations["DriverObjects"][i]["lst_passenger_trips"][n]["trip_duration"]))
         tbody += "</tr>"
 
     new_table_html = """<table class="table">
@@ -115,4 +120,4 @@ def update_graphs():
     return calculations
 
 #Comment out before updating PythonAnywhere
-#app.run()
+app.run()
