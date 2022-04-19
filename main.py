@@ -32,8 +32,8 @@ def update_graphs():
     fairness_optimize = True if request.args.get('fairness_checkbox') == "true" else False
     waittime_optimize = True if request.args.get('waittime_checkbox') == "true" else False
 
-    print(seniority_weight, fairness_weight, waittime_weight)
-    print(seniority_optimize, fairness_optimize, waittime_optimize)
+    #print(seniority_weight, fairness_weight, waittime_weight)
+    #print(seniority_optimize, fairness_optimize, waittime_optimize)
 
     # Optimize: Run through all possible combinations of unlocked values (values that user selected to optimize)
     # and return the combination of seniority, fairness, and wait time weights that minimize the difference between
@@ -71,6 +71,7 @@ def update_graphs():
     #                 print("Update best:", best_combination)
     #
     # i, j, k = best_combination
+
     # i, j, k = seniority_weight, fairness_weight, waittime_weight
     # my_file = os.path.join(THIS_FOLDER, "static", "{} {} {}.json.gz".format(i, j, k))
     # calculations = compress_json.load(my_file)
