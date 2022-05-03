@@ -20,6 +20,28 @@
     </script>
   </head>
   <body class="bg-light">
+    <div class="row justify-content-center">
+      <div class="card" style="width: 40rem;">
+        <div class="card-body">
+          <h5 class="card-title">Source of Data</h5>
+          <h6 class="card-subtitle mb-2 text-muted">Chicago TNC Dataset</h6>
+          <p class="card-text">The passenger trips and driver profiles are taken from the Chicago Data Portal.<br>
+          Trips: https://data.cityofchicago.org/Transportation/Transportation-Network-Providers-Trips/m6dm-c72p.<br>
+          Drivers: https://data.cityofchicago.org/Transportation/Transportation-Network-Providers-Drivers/j6wf-834c.</p>
+        </div>
+      </div>
+      <div class="card" style="width: 40rem;">
+        <div class="card-body">
+          <h5 class="card-title">Algorithm Design</h5>
+          <h6 class="card-subtitle mb-2 text-muted">How are passengers matched to drivers?</h6>
+          <p class="card-text"><ul>For each passenger trip, the program does the following:
+              <li>Drivers are ranked in three subcategories: seniority (# of months driver has been on the platform), income ($ driver earned thus far), and wait time (how long it would take for driver to pickup passenger)</li>
+              <li>Use the drivers’ ranks in each subcategory and multiply it by its respective weight to create an overall driver ranking using a linear sum where a,b,c are cooefficients: <b>a * seniority_rank + b * income_rank + c * wait_time_rank = overall_driver_rank</b></li>
+              <li>The driver ranked highest overall is assigned to the current passenger trip, and the program moves on to the next trip and redos this process.</li>
+            </ul></p>
+        </div>
+      </div>
+    </div>
 
     <div class="row justify-content-center">
       <div class="card" style="width: 18rem;">

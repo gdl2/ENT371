@@ -229,7 +229,10 @@ def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_mont
     for passengerid, passenger_trip in dict_passenger_trips.items():
         #print("passengerid:", passengerid)
         # Get top ranked driver
-        driverid, passenger_wait_time = rank_drivers(dict_drivers, passenger_trip, driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight)
+        driverid, passenger_wait_time = rank_drivers(dict_drivers, passenger_trip,
+                                                    driver_months_active_weight, 
+                                                    driver_income_earned_weight,
+                                                    passenger_wait_time_weight)
         # Assign top driver to passenger
         #print(driverid)
         top_driver = dict_drivers[driverid]
