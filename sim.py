@@ -245,12 +245,12 @@ def assign_drivers_to_passengers(dict_passenger_trips, dict_drivers, driver_mont
 
 seed(42)
 # Take a random sample of _ passenger trips
-random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 20)
+random_sample_p = sample(range(1, len(SINGLE_PASSENGER_TRIPS_DICT)), 1000)
 random_sample_p.sort()
 print(random_sample_p)
 
 # Take a random sample of _ drivers
-random_sample_d = sample(range(1, len(DRIVERS_DICT)), 10)
+random_sample_d = sample(range(1, len(DRIVERS_DICT)), 100)
 random_sample_d.sort()
 print(random_sample_d)
 
@@ -276,7 +276,7 @@ for i in range_of_values:
             # Last 4 variables correspond to: driver_months_active_weight, driver_income_earned_weight, passenger_wait_time_weight
             assign_drivers_to_passengers(random_sample_passenger_trips_dict, random_sample_drivers_dict, i, j, k)
 
-            calculations = {"DriverObjects": [], "DriverIncomes": [], "PassengerWaitTimes": [], "DriverTableColumns": 0}
+            calculations = {"DriverObjects": [], "DriverIncomes": [], "PassengerWaitTimes": [], "DriverTableColumns": 0, "DriverIncomesHistogramStats": "", "PassengerWaitTimesHistogramStats": ""}
             # Record the driver income for each driver in our sample
             max_passenger_trips = 0
             for id, driver in random_sample_drivers_dict.items():
@@ -288,6 +288,11 @@ for i in range_of_values:
             # Record the passenger wait time for each passenger in our sample
             for id, passenger in random_sample_passenger_trips_dict.items():
                 calculations["PassengerWaitTimes"].append(passenger["trip_wait_time"])
+
+            # Calculate histogram statistics
+            calculations["DriverIncomesHistogramStats"] = "<h4>Avg: ${}  Std Dev: ${}</h4>".format(round(np.mean(calculations["DriverIncomes"])), round(np.std(calculations["DriverIncomes"])))
+            calculations["PassengerWaitTimesHistogramStats"] = "<h4>Avg: {}s  Std Dev: {}s</h4>".format(round(np.mean(calculations["PassengerWaitTimes"])), round(np.std(calculations["PassengerWaitTimes"])))
+            #print(calculations["DriverIncomesHistogramStats"], calculations["PassengerWaitTimesHistogramStats"])
 
             my_file = "static/{} {} {}.json.gz".format(i, j, k)
             print(my_file)

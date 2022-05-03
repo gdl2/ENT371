@@ -28,60 +28,58 @@ def update_graphs():
     seniority_weight = request.args.get('seniority_weight', default = 0.0, type = float)
     fairness_weight = request.args.get('fairness_weight', default = 0.0, type = float)
     waittime_weight = request.args.get('waittime_weight', default = 0.0, type = float)
-    seniority_optimize = True if request.args.get('seniority_checkbox') == "true" else False
-    fairness_optimize = True if request.args.get('fairness_checkbox') == "true" else False
-    waittime_optimize = True if request.args.get('waittime_checkbox') == "true" else False
+    seniority_lock = True if request.args.get('seniority_checkbox') == "true" else False
+    fairness_lock = True if request.args.get('fairness_checkbox') == "true" else False
+    waittime_lock = True if request.args.get('waittime_checkbox') == "true" else False
 
     #print(seniority_weight, fairness_weight, waittime_weight)
     #print(seniority_optimize, fairness_optimize, waittime_optimize)
 
-    # Optimize: Run through all possible combinations of unlocked values (values that user selected to optimize)
+    # Optimize: Run through all possible combinations of unlocked values (values that user did not lock)
     # and return the combination of seniority, fairness, and wait time weights that minimize the difference between
     # averages of passenger wait time (less is better) and negative driver income (more is better)
     # possible_combinations = []
-    # range_of_values = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
-    # if seniority_optimize:
-    #     seniority_values = range_of_values
-    # else:
-    #     seniority_values = [seniority_weight]
-    # if fairness_optimize:
-    #     fairness_values = range_of_values
-    # else:
-    #     fairness_values = [fairness_weight]
-    # if waittime_optimize:
-    #     waittime_values = range_of_values
-    # else:
-    #     waittime_values = [waittime_weight]
-    #
-    # best_diff_averages = float('inf')
-    # best_combination = [0.0, 0.0, 0.0]
-    # for i in seniority_values:
-    #     for j in fairness_values:
-    #         for k in waittime_values:
-    #             print(i, j, k)
-    #
-    #             my_file = os.path.join(THIS_FOLDER, "static", "{} {} {}.json.gz".format(i, j, k))
-    #             calculations = compress_json.load(my_file)
-    #
-    #             # Try to minimize the sum of passenger wait time (smaller better) and negative driver incomes (larger better)
-    #             diff_averages = np.mean(calculations["PassengerWaitTimes"]) - np.mean(calculations["DriverIncomes"]) * 1000
-    #             if diff_averages < best_diff_averages:
-    #                 best_diff_averages = diff_averages
-    #                 best_combination = [i, j, k]
-    #                 print("Update best:", best_combination)
-    #
-    # i, j, k = best_combination
+    range_of_values = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    if not seniority_lock:
+        seniority_values = range_of_values
+    else:
+        seniority_values = [seniority_weight]
+    if not fairness_lock:
+        fairness_values = range_of_values
+    else:
+        fairness_values = [fairness_weight]
+    if not waittime_lock:
+        waittime_values = range_of_values
+    else:
+        waittime_values = [waittime_weight]
 
-    # i, j, k = seniority_weight, fairness_weight, waittime_weight
-    # my_file = os.path.join(THIS_FOLDER, "static", "{} {} {}.json.gz".format(i, j, k))
-    # calculations = compress_json.load(my_file)
-    # calculations["i"] = i
-    # calculations["j"] = j
-    # calculations["k"] = k
+    best_diff_averages = float('inf')
+    best_combination = [0.0, 0.0, 0.0]
+    for i in seniority_values:
+        for j in fairness_values:
+            for k in waittime_values:
+                print(i, j, k)
 
+                my_file = os.path.join(THIS_FOLDER, "static", "{} {} {}.json.gz".format(i, j, k))
+                calculations = compress_json.load(my_file)
 
-    my_file = os.path.join(THIS_FOLDER, "static", "{} {} {}.json.gz".format(seniority_weight, fairness_weight, waittime_weight))
+                # Try to minimize the sum of passenger wait time (smaller better) and negative driver incomes (larger better)
+                diff_averages = np.mean(calculations["PassengerWaitTimes"]) - np.mean(calculations["DriverIncomes"]) * 100
+                if diff_averages < best_diff_averages:
+                    best_diff_averages = diff_averages
+                    best_combination = [i, j, k]
+                    print("Update best:", best_combination)
+
+    i, j, k = best_combination
+    my_file = os.path.join(THIS_FOLDER, "static", "{} {} {}.json.gz".format(i, j, k))
     calculations = compress_json.load(my_file)
+    calculations["i"] = i
+    calculations["j"] = j
+    calculations["k"] = k
+
+
+    # my_file = os.path.join(THIS_FOLDER, "static", "{} {} {}.json.gz".format(seniority_weight, fairness_weight, waittime_weight))
+    # calculations = compress_json.load(my_file)
 
     maxTableCols = int(calculations["DriverTableColumns"])
     thead_cols = ""
@@ -121,4 +119,4 @@ def update_graphs():
     return calculations
 
 #Comment out before updating PythonAnywhere
-#app.run()
+app.run()

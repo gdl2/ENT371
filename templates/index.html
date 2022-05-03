@@ -47,42 +47,51 @@
 
 
     <div class="row justify-content-center">
-        <div id="DriverIncomesHistogram"></div> <div id="PassengerWaitTimesHistogram"></div>
+      <div class="col-auto">
+        <div id="DriverIncomesHistogram"></div> <br>
+        <!-- <div id="DriverIncomesHistogramStats"></div> -->
+      </div>
+      <div class="col-auto">
+       <div id="PassengerWaitTimesHistogram"></div> <br>
+       <!-- <div id="PassengerWaitTimesHistogramStats"></div> -->
+     </div>
     </div>
+
 
     <div class="container d-flex justify-content-center">
       <div class="form-group jumbotron my-auto" style="width: 50%;">
       <form action="/" id="form">
           <label for="seniority_weight" class="form-label">Seniority Weight</label>
-          <input type="range" name="seniority_weight" class="form-range" value="0" min="0" max="1" step=".2" id="seniority_weight" oninput="seniority_weight_output.value = map_values_to_importance[this.value]; submitForm();"><output id="seniority_weight_output">Not Important</output>
+          <input type="range" name="seniority_weight" class="form-range" value="0" min="0" max="1" step=".2" id="seniority_weight" oninput="seniority_weight_output.value = map_values_to_importance[this.value];"><output id="seniority_weight_output">Not Important</output>
           <div class="form-check">
             <input class="form-check-input" type="checkbox" value="" id="seniority_checkbox" oninput="$('#seniority_weight').prop('disabled', $('#seniority_checkbox').is(':checked'));">
             <label class="form-check-label" for="seniority_checkbox">
-              Optimize?
+              Lock?
             </label>
           </div>
           <br />
 
-          <label for="fairness_weight" class="form-label">Fairness Weight</label>
-          <input type="range" name="fairness_weight" class="form-range" value="0" min="0" max="1" step=".2" id="fairness_weight" oninput="fairness_weight_output.value = map_values_to_importance[this.value]; submitForm();"><output id="fairness_weight_output">Not Important</output>
+          <label for="fairness_weight" class="form-label">Equality Weight</label>
+          <input type="range" name="fairness_weight" class="form-range" value="0" min="0" max="1" step=".2" id="fairness_weight" oninput="fairness_weight_output.value = map_values_to_importance[this.value];"><output id="fairness_weight_output">Not Important</output>
           <div class="form-check">
             <input class="form-check-input" type="checkbox" value="" id="fairness_checkbox" oninput="$('#fairness_weight').prop('disabled', $('#fairness_checkbox').is(':checked'));">
             <label class="form-check-label" for="fairness_checkbox">
-              Optimize?
+              Lock?
             </label>
           </div>
           <br />
 
           <label for="waittime_weight" class="form-label">Passenger Wait Time Weight</label>
-          <input type="range" name="waittime_weight" class="form-range" value="0" min="0" max="1" step=".2" id="waittime_weight" oninput="waittime_weight_output.value = map_values_to_importance[this.value]; submitForm();"><output id="waittime_weight_output">Not Important</output>
+          <input type="range" name="waittime_weight" class="form-range" value="0" min="0" max="1" step=".2" id="waittime_weight" oninput="waittime_weight_output.value = map_values_to_importance[this.value];"><output id="waittime_weight_output">Not Important</output>
           <div class="form-check">
             <input class="form-check-input" type="checkbox" value="" id="waittime_checkbox" oninput="$('#waittime_weight').prop('disabled', $('#waittime_checkbox').is(':checked'));">
             <label class="form-check-label" for="waittime_checkbox">
-              Optimize?
+              Lock?
             </label>
           </div>
           <br />
 
+          <button type="button" class="btn btn-primary" onclick="submitForm();">Calculate</button>
       </form>
       </div>
     </div>
@@ -140,6 +149,7 @@
       var config = {'staticPlot': true};
       Plotly.newPlot('DriverIncomesHistogram', data, driver_income_histogram_layout, config);
 
+      $("#DriverIncomesHistogramStats").html(CALCULATIONS["DriverIncomesHistogramStats"]);
 
       var passenger_wait_time_histogram = {
         x: CALCULATIONS["PassengerWaitTimes"],
@@ -155,12 +165,14 @@
       var data = [passenger_wait_time_histogram];
       Plotly.newPlot('PassengerWaitTimesHistogram', data, passenger_wait_time_histogram_layout, config);
 
+      $("#PassengerWaitTimesHistogramStats").html(CALCULATIONS["PassengerWaitTimesHistogramStats"]);
 
       $("#form").submit(function(e) {
         e.preventDefault();
       });
 
       function handleResponse(calculations) {
+        console.log(CALCULATIONS);
         var driver_income_histogram = {
           x: calculations["DriverIncomes"],
           type: 'histogram',
@@ -176,13 +188,15 @@
         Plotly.react('PassengerWaitTimesHistogram', data, passenger_wait_time_histogram_layout, config);
 
         $('#driver_table').html(calculations["new_driver_table"]);
+        $("#DriverIncomesHistogramStats").html(CALCULATIONS["DriverIncomesHistogramStats"]);
+        $("#PassengerWaitTimesHistogramStats").html(CALCULATIONS["PassengerWaitTimesHistogramStats"]);
 
-        // $("#seniority_weight").val(calculations["i"]);
-        // $('#seniority_weight_output').val(map_values_to_importance[calculations["i"]]);
-        // $("#fairness_weight").val(calculations["j"]);
-        // $('#fairness_weight_output').val(map_values_to_importance[calculations["j"]]);
-        // $("#waittime_weight").val(calculations["k"]);
-        // $('#waittime_weight_output').val(map_values_to_importance[calculations["k"]]);
+        $("#seniority_weight").val(calculations["i"]);
+        $('#seniority_weight_output').val(map_values_to_importance[calculations["i"]]);
+        $("#fairness_weight").val(calculations["j"]);
+        $('#fairness_weight_output').val(map_values_to_importance[calculations["j"]]);
+        $("#waittime_weight").val(calculations["k"]);
+        $('#waittime_weight_output').val(map_values_to_importance[calculations["k"]]);
       };
 
       var request = null;
